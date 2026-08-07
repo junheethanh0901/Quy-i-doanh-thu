@@ -23,7 +23,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-color); padding-bottom: 80px; transition: 0.3s; }
 
-        /* HEADER GỌN NHẸ */
         header {
             background-color: var(--dmx-blue);
             color: white;
@@ -58,7 +57,6 @@
         }
         .stat-item b { color: var(--dmx-yellow); display: block; font-size: 0.9rem; }
 
-        /* CONTAINER */
         .container { max-width: 600px; margin: 15px auto; padding: 0 10px; }
 
         .main-card {
@@ -87,7 +85,6 @@
         }
         .btn-save:active { box-shadow: none; transform: translateY(2px); }
 
-        /* LIST HEADER & CLEAR ALL */
         .list-header-row {
             display: flex;
             justify-content: space-between;
@@ -104,7 +101,6 @@
             border-radius: 5px; font-size: 0.75rem; font-weight: bold; cursor: pointer;
         }
 
-        /* LIST ITEM */
         .item {
             background: var(--card-bg); padding: 12px; border-radius: 8px; margin-bottom: 8px;
             display: flex; justify-content: space-between; align-items: center;
@@ -112,12 +108,11 @@
         }
 
         .item-name { font-weight: bold; font-size: 0.9rem; }
-        .item-sub { font-size: 0.75rem; color: #777; margin-top: 2px; }
+        .item-sub { font-size: 0.8rem; color: #666; margin-top: 4px; font-weight: 500; }
         .item-val { text-align: right; }
         .val-qd { color: var(--dmx-blue); font-weight: bold; font-size: 1rem; }
         .del-btn { color: #d32f2f; background: none; border: none; font-size: 0.75rem; margin-top: 5px; cursor: pointer; text-decoration: underline; }
 
-        /* MONTHLY STATS */
         .month-stats {
             background: linear-gradient(135deg, #2c3e50, #000000);
             color: white; padding: 15px; border-radius: var(--border-radius);
@@ -173,7 +168,7 @@
 
     <div class="list-header-row">
         <div class="list-header">Chi tiết đã nhập</div>
-        <button class="btn-clear-all" onclick="clearDayData()">XÓA TẤT CẢ (NGÀY NÀY)</button>
+        <button class="btn-clear-all" onclick="clearDayData()">XÓA TẤT CẢ</button>
     </div>
     <div id="item-list"></div>
 
@@ -217,8 +212,7 @@
         { id: "td", name: "Tủ đông", rate: 1.00 },
         { id: "mnn", name: "Máy nước nóng", rate: 1.00 },
         { id: "ms", name: "Máy sấy", rate: 1.00 },
-        { id: "mrc", name: "Máy rửa chén", rate: 1.00 },
-        { id: "mhb", name: "Máy hút bụi", rate: 1.00 }
+        { id: "mrc", name: "Máy rửa chén", rate: 1.00 }
     ];
 
     let db;
@@ -276,27 +270,17 @@
         renderAll();
     }
 
-    // XÓA TẤT CẢ DỮ LIỆU CỦA NGÀY ĐANG CHỌN
     async function clearDayData() {
         const date = dateInput.value;
-        if (!confirm(`Bạn có chắc muốn xóa TẤT CẢ dữ liệu đã nhập trong ngày ${date}?`)) return;
-
+        if (!confirm(`Xóa tất cả dữ liệu ngày ${date}?`)) return;
         const tx = db.transaction("data", "readwrite");
         const store = tx.objectStore("data");
         const all = await new Promise(r => {
             const req = store.getAll();
             req.onsuccess = () => r(req.result);
         });
-
-        const dayItems = all.filter(d => d.date === date);
-        dayItems.forEach(item => {
-            store.delete(item.id);
-        });
-
-        tx.oncomplete = () => {
-            showToast("Đã xóa sạch ngày này!");
-            renderAll();
-        };
+        all.filter(d => d.date === date).forEach(item => store.delete(item.id));
+        tx.oncomplete = () => renderAll();
     }
 
     async function renderAll() {
@@ -310,18 +294,19 @@
         const dayData = all.filter(d => d.date === date);
         let dR = 0, dC = 0;
         const list = document.getElementById('item-list');
-        list.innerHTML = dayData.length === 0 ? '<p style="font-size:0.8rem; color:#888; text-align:center; padding:10px;">Chưa có dữ liệu ngày này</p>' : '';
+        list.innerHTML = dayData.length === 0 ? '<p style="font-size:0.8rem; color:#888; text-align:center; padding:10px;">Chưa có dữ liệu</p>' : '';
 
         dayData.reverse().forEach(item => {
             const c = CATS.find(x => x.id === item.catId);
-            let qd = item.val * c.rate;
-            if (item.isIns) qd += (item.val * 0.3);
+            let rateFinal = c.rate + (item.isIns ? 0.3 : 0);
+            let qd = item.val * rateFinal;
             dR += item.val; dC += qd;
+
             list.innerHTML += `
                 <div class="item">
                     <div>
-                        <div class="item-name">${c.name} ${item.isIns ? '<span style="color:green;font-size:0.7rem;">[TRẢ GÓP]</span>' : ''}</div>
-                        <div class="item-sub">Thực: ${fmt(item.val)}</div>
+                        <div class="item-name">${c.name} ${item.isIns ? '<span style="color:#2ecc71;font-size:0.7rem;">[TRẢ GÓP]</span>' : ''}</div>
+                        <div class="item-sub">${fmtShort(item.val)} x ${rateFinal.toFixed(2)}</div>
                         <button class="del-btn" onclick="delItem('${item.id}')">Xóa</button>
                     </div>
                     <div class="item-val">
@@ -340,9 +325,7 @@
         monData.forEach(item => {
             const c = CATS.find(x => x.id === item.catId);
             mR += item.val;
-            let qd = item.val * c.rate;
-            if (item.isIns) qd += (item.val * 0.3);
-            mC += qd;
+            mC += (item.val * (c.rate + (item.isIns ? 0.3 : 0)));
         });
 
         document.getElementById('month-area').innerHTML = `
@@ -353,9 +336,11 @@
     }
 
     function fmt(v) { return new Intl.NumberFormat('vi-VN').format(Math.round(v)) + " đ"; }
+    
     function fmtShort(v) { 
-        if (v >= 1000000) return (v/1000000).toFixed(2) + "M";
-        return new Intl.NumberFormat('vi-VN').format(Math.round(v));
+        if (v >= 1000000) return (v/1000000).toFixed(1).replace(".0", "") + "M";
+        if (v >= 1000) return (v/1000).toFixed(0) + "k";
+        return v;
     }
 
     function showToast(msg) {
@@ -379,7 +364,7 @@
         let csv = "\uFEFFNgày,Ngành,Thực tế,Trả góp,Quy đổi\n";
         all.forEach(d => {
             const c = CATS.find(x => x.id === d.catId);
-            let qd = d.val * c.rate; if (d.isIns) qd += (d.val * 0.3);
+            let qd = d.val * (c.rate + (d.isIns ? 0.3 : 0));
             csv += `${d.date},${c.name},${d.val},${d.isIns?'Có':'Không'},${qd}\n`;
         });
         const blob = new Blob([csv], { type: 'text/csv' });
