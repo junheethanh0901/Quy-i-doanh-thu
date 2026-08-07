@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quy Đổi DMX - Thông Minh</title>
+    <style>
+        :root {
+            --dmx-blue: #0056a3;
+            --dmx-yellow: #fed100;
+            --bg-color: #f2f4f7;
+            --card-bg: #ffffff;
+            --text-color: #222;
+            --border-radius: 10px;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); padding-bottom: 80px; transition: 0.3s; }
+
+        /* HEADER GỌN NHẸ */
+        header {
+            background-color: var(--dmx-blue);
+            color: white;
+            padding: 8px 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .date-nav { display: flex; align-items: center; gap: 8px; }
+        .date-nav input {
+            padding: 4px 8px; border-radius: 15px; border: none;
+            font-size: 0.85rem; font-weight: bold; background: white; text-align: center;
+        }
+
+        .nav-arrow { background: rgba(255,255,255,0.2); border: none; color: white; padding: 2px 10px; border-radius: 5px; cursor: pointer; }
+
+        .stats-bar {
+            display: grid; grid-template-columns: 1fr 1.2fr 0.8fr;
+            max-width: 600px; margin: 5px auto 0;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 5px; font-size: 0.75rem; text-align: center;
+        }
+        .stat-item b { color: var(--dmx-yellow); display: block; font-size: 0.9rem; }
+
+        /* CONTAINER */
+        .container { max-width: 600px; margin: 15px auto; padding: 0 10px; }
+
+        .main-card {
+            background: var(--card-bg); padding: 15px; border-radius: var(--border-radius);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px;
+        }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 0.8rem; margin-bottom: 4px; font-weight: bold; opacity: 0.8; }
+
+        select, .money-input {
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;
+            font-size: 1.1rem; background: var(--card-bg); color: var(--text-color); outline: none; font-weight: bold;
+        }
+
+        .check-box {
+            display: flex; align-items: center; gap: 10px; margin: 15px 0;
+            font-size: 0.9rem; cursor: pointer; font-weight: 500;
+        }
+        .check-box input { width: 20px; height: 20px; }
+
+        .btn-save {
+            width: 100%; padding: 14px; background: var(--dmx-blue); color: white;
+            border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 0 #003d73; font-size: 1rem;
+        }
+        .btn-save:active { box-shadow: none; transform: translateY(2px); }
+
+        /* LIST */
+        .list-header { font-size: 0.9rem; margin: 15px 0 8px; font-weight: bold; border-left: 3px solid var(--dmx-yellow); padding-left: 8px; }
+        
+        .item {
+            background: var(--card-bg); padding: 12px; border-radius: 8px; margin-bottom: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-left: 4px solid var(--dmx-blue); box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .item-name { font-weight: bold; font-size: 0.9rem; }
+        .item-sub { font-size: 0.75rem; color: #777; margin-top: 2px; }
+        .item-val { text-align: right; }
+        .val-qd { color: var(--dmx-blue); font-weight: bold; font-size: 1rem; }
+        .del-btn { color: #d32f2f; background: none; border: none; font-size: 0.75rem; margin-top: 5px; cursor: pointer; text-decoration: underline; }
+
+        /* MONTHLY STATS */
+        .month-stats {
+            background: linear-gradient(135deg, #2c3e50, #000000);
+            color: white; padding: 15px; border-radius: var(--border-radius);
+            margin-top: 20px; font-size: 0.85rem;
+        }
+
+        footer {
+            position: fixed; bottom: 0; width: 100%; background: #222; color: #888;
+            text-align: center; padding: 8px; font-size: 0.7rem;
+        }
+
+        #toast {
+            position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.9); color: white; padding: 8px 16px; border-radius: 20px;
+            font-size: 0.8rem; display: none; z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-top">
+        <span style="font-weight: bold; font-size: 0.85rem;">QUY ĐỔI ĐMX</span>
+        <div class="date-nav">
+            <button class="nav-arrow" onclick="changeDate(-1)">◀</button>
+            <input type="date" id="current-date" onchange="renderAll()">
+            <button class="nav-arrow" onclick="changeDate(1)">▶</button>
+        </div>
+    </div>
+    <div class="stats-bar">
+        <div class="stat-item">Thực tế <b id="d-real">0</b></div>
+        <div class="stat-item">Quy đổi <b id="d-conv">0</b></div>
+        <div class="stat-item">Hiệu suất <b id="d-ratio">0%</b></div>
+    </div>
+</header>
+
+<div class="container">
+    <div class="main-card">
+        <div class="form-group">
+            <label>Ngành hàng</label>
+            <select id="cat-select"></select>
+        </div>
+        <div class="form-group">
+            <label>Doanh thu thực (VNĐ)</label>
+            <input type="text" id="revenue-input" class="money-input" placeholder="10.000.000" 
+                   inputmode="numeric" oninput="formatInput(this)">
+        </div>
+        <label class="check-box">
+            <input type="checkbox" id="install-check"> Có trả góp (+30% quy đổi)
+        </label>
+        <button class="btn-save" onclick="handleSave()">CẬP NHẬT DỮ LIỆU</button>
+    </div>
+
+    <div class="list-header">Dữ liệu đã nhập trong ngày</div>
+    <div id="item-list"></div>
+
+    <div class="month-stats" id="month-area"></div>
+
+    <div style="margin-top:15px; display:flex; gap:10px;">
+        <button onclick="exportCSV()" style="flex:1; padding:10px; border-radius:5px; border:none; background:#217346; color:white; font-size:0.8rem; font-weight:bold;">Xuất Excel</button>
+        <button onclick="toggleTheme()" style="flex:1; padding:10px; border-radius:5px; border:none; background:#555; color:white; font-size:0.8rem; font-weight:bold;">🌓 Đổi màu nền</button>
+    </div>
+</div>
+
+<div id="toast">Đã lưu thành công!</div>
+
+<footer>Design by Huỳnh Nhật Thanh - 189547</footer>
+
+<script>
+    const CATS = [
+        { id: "sim", name: "Sim", rate: 5.45 },
+        { id: "bh", name: "Bảo hiểm", rate: 4.18 },
+        { id: "dv_bh", name: "DV bảo hành ĐMX", rate: 4.18 },
+        { id: "pk_ti", name: "Phụ kiện tiện ích", rate: 3.37 },
+        { id: "pk_tr", name: "Phụ kiện trang trí", rate: 3.37 },
+        { id: "loa_vt", name: "Loa vi tính", rate: 3.37 },
+        { id: "vas", name: "VAS", rate: 3.30 },
+        { id: "mat_kinh", name: "Mắt kính", rate: 3.07 },
+        { id: "dh_tt", name: "Đồng hồ thời trang", rate: 3.00 },
+        { id: "wearable", name: "Wearable", rate: 3.00 },
+        { id: "it", name: "IT", rate: 2.00 },
+        { id: "nha_bep", name: "Dụng cụ nhà bếp", rate: 1.92 },
+        { id: "dien_gd", name: "Điện gia dụng", rate: 1.85 },
+        { id: "loc_nuoc", name: "Máy lọc nước", rate: 1.85 },
+        { id: "gd_ld", name: "Gia dụng lắp đặt", rate: 1.85 },
+        { id: "loa_ka", name: "Loa Karaoke", rate: 1.29 },
+        { id: "laptop", name: "Laptop", rate: 1.20 },
+        { id: "tablet", name: "Tablet", rate: 1.20 },
+        { id: "dt", name: "Điện thoại", rate: 1.00 },
+        { id: "tivi", name: "Tivi", rate: 1.00 },
+        { id: "ml", name: "Máy lạnh", rate: 1.00 },
+        { id: "mg", name: "Máy giặt", rate: 1.00 },
+        { id: "tl", name: "Tủ lạnh", rate: 1.00 },
+        { id: "td", name: "Tủ đông", rate: 1.00 },
+        { id: "mnn", name: "Máy nước nóng", rate: 1.00 },
+        { id: "ms", name: "Máy sấy", rate: 1.00 },
+        { id: "mrc", name: "Máy rửa chén", rate: 1.00 },
+        { id: "mhb", name: "Máy hút bụi", rate: 1.00 }
+    ];
+
+    let db;
+    const dateInput = document.getElementById('current-date');
+    const revenueInput = document.getElementById('revenue-input');
+
+    // TỰ ĐỘNG ĐỊNH DẠNG SỐ KHI NHẬP (10.000.000)
+    function formatInput(el) {
+        let value = el.value.replace(/\D/g, ""); // Chỉ giữ lại số
+        if (value === "") {
+            el.value = "";
+            return;
+        }
+        el.value = new Intl.NumberFormat('vi-VN').format(value);
+    }
+
+    // DB
+    function initDB() {
+        return new Promise(res => {
+            const req = indexedDB.open("DMX_V4_Final", 1);
+            req.onupgradeneeded = e => e.target.result.createObjectStore("data", { keyPath: "key" });
+            req.onsuccess = e => { db = e.target.result; res(); };
+        });
+    }
+
+    // GIAO DIỆN
+    function initUI() {
+        const sel = document.getElementById('cat-select');
+        CATS.sort((a,b) => b.rate - a.rate).forEach(c => {
+            sel.innerHTML += `<option value="${c.id}">${c.name} (${(c.rate*100).toFixed(0)}%)</option>`;
+        });
+        dateInput.value = new Date().toISOString().split('T')[0];
+        renderAll();
+    }
+
+    function changeDate(n) {
+        const d = new Date(dateInput.value);
+        d.setDate(d.getDate() + n);
+        dateInput.value = d.toISOString().split('T')[0];
+        renderAll();
+    }
+
+    // LƯU DỮ LIỆU
+    async function handleSave() {
+        // Lấy số từ chuỗi định dạng (xóa dấu chấm)
+        const rawValue = revenueInput.value.replace(/\./g, "");
+        const val = parseFloat(rawValue);
+        
+        if (!val || val < 0) {
+            alert("Vui lòng nhập số tiền!");
+            return;
+        }
+        
+        const catId = document.getElementById('cat-select').value;
+        const isIns = document.getElementById('install-check').checked;
+        const date = dateInput.value;
+
+        const tx = db.transaction("data", "readwrite");
+        await tx.objectStore("data").put({
+            key: `${date}_${catId}`,
+            date, catId, val, isIns
+        });
+
+        showToast();
+        revenueInput.value = '';
+        renderAll();
+    }
+
+    async function delItem(k) {
+        if (!confirm("Xóa dòng này?")) return;
+        const tx = db.transaction("data", "readwrite");
+        await tx.objectStore("data").delete(k);
+        renderAll();
+    }
+
+    async function renderAll() {
+        const date = dateInput.value;
+        const tx = db.transaction("data", "readonly");
+        const all = await new Promise(r => {
+            const req = tx.objectStore("data").getAll();
+            req.onsuccess = () => r(req.result);
+        });
+
+        // Thống kê ngày
+        const dayData = all.filter(d => d.date === date);
+        let dR = 0, dC = 0;
+        const list = document.getElementById('item-list');
+        list.innerHTML = dayData.length === 0 ? '<p style="font-size:0.8rem; color:#888; text-align:center; padding:10px;">Chưa có dữ liệu</p>' : '';
+
+        dayData.forEach(item => {
+            const c = CATS.find(x => x.id === item.catId);
+            let qd = item.val * c.rate;
+            if (item.isIns) qd += (item.val * 0.3);
+            dR += item.val; dC += qd;
+
+            list.innerHTML += `
+                <div class="item">
+                    <div>
+                        <div class="item-name">${c.name} ${item.isIns ? '⭐' : ''}</div>
+                        <div class="item-sub">Thực: ${fmt(item.val)}</div>
+                        <button class="del-btn" onclick="delItem('${item.key}')">Xóa</button>
+                    </div>
+                    <div class="item-val">
+                        <div class="val-qd">${fmt(qd)}</div>
+                        <div class="item-sub">HS: ${(qd/item.val*100).toFixed(0)}%</div>
+                    </div>
+                </div>`;
+        });
+
+        document.getElementById('d-real').innerText = fmtShort(dR);
+        document.getElementById('d-conv').innerText = fmtShort(dC);
+        document.getElementById('d-ratio').innerText = dR > 0 ? Math.round((dC/dR)*100) + "%" : "0%";
+
+        // Thống kê tháng
+        const monthKey = date.substring(0, 7);
+        const monData = all.filter(d => d.date.startsWith(monthKey));
+        let mR = 0, mC = 0;
+        monData.forEach(item => {
+            const c = CATS.find(x => x.id === item.catId);
+            mR += item.val;
+            let qd = item.val * c.rate;
+            if (item.isIns) qd += (item.val * 0.3);
+            mC += qd;
+        });
+
+        document.getElementById('month-area').innerHTML = `
+            <div style="font-weight:bold; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:5px;">THỐNG KÊ THÁNG ${monthKey}</div>
+            <div style="display:flex; justify-content:space-between;"><span>Tổng thực:</span> <b>${fmt(mR)}</b></div>
+            <div style="display:flex; justify-content:space-between; margin-top:5px;"><span>Tổng quy đổi:</span> <b style="color:var(--dmx-yellow); font-size:1.1rem">${fmt(mC)}</b></div>
+            <div style="margin-top:5px; opacity:0.8">Hiệu suất tháng: ${mR > 0 ? Math.round((mC/mR)*100) : 0}%</div>
+        `;
+    }
+
+    function fmt(v) { return new Intl.NumberFormat('vi-VN').format(Math.round(v)) + " đ"; }
+    
+    function fmtShort(v) { 
+        if (v >= 1000000) return (v/1000000).toFixed(2) + "M";
+        return new Intl.NumberFormat('vi-VN').format(Math.round(v));
+    }
+
+    function showToast() {
+        const t = document.getElementById('toast');
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 1500);
+    }
+
+    function toggleTheme() {
+        const b = document.body;
+        b.setAttribute('data-theme', b.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    }
+
+    async function exportCSV() {
+        const tx = db.transaction("data", "readonly");
+        const all = await new Promise(r => {
+            const req = tx.objectStore("data").getAll();
+            req.onsuccess = () => r(req.result);
+        });
+        let csv = "\uFEFFNgày,Ngành,Thực tế,Trả góp,Quy đổi\n";
+        all.forEach(d => {
+            const c = CATS.find(x => x.id === d.catId);
+            let qd = d.val * c.rate; if (d.isIns) qd += (d.val * 0.3);
+            csv += `${d.date},${c.name},${d.val},${d.isIns?'Có':'Không'},${qd}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `DoanhThu_DMX_History.csv`;
+        a.click();
+    }
+
+    window.onload = async () => { await initDB(); initUI(); };
+</script>
+</body>
+</html>
