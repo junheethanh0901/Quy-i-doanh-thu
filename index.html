@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quy Đổi DMX - Lưu Lịch Sử</title>
+    <title>Quy Đổi DMX - Thông Minh</title>
     <style>
         :root {
             --dmx-blue: #0056a3;
@@ -87,9 +87,24 @@
         }
         .btn-save:active { box-shadow: none; transform: translateY(2px); }
 
-        /* LIST */
-        .list-header { font-size: 0.9rem; margin: 15px 0 8px; font-weight: bold; border-left: 3px solid var(--dmx-yellow); padding-left: 8px; }
-        
+        /* LIST HEADER & CLEAR ALL */
+        .list-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0 8px;
+        }
+
+        .list-header { 
+            font-size: 0.9rem; font-weight: bold; border-left: 3px solid var(--dmx-yellow); padding-left: 8px; 
+        }
+
+        .btn-clear-all {
+            background: #ff4444; color: white; border: none; padding: 4px 10px;
+            border-radius: 5px; font-size: 0.75rem; font-weight: bold; cursor: pointer;
+        }
+
+        /* LIST ITEM */
         .item {
             background: var(--card-bg); padding: 12px; border-radius: 8px; margin-bottom: 8px;
             display: flex; justify-content: space-between; align-items: center;
@@ -156,7 +171,10 @@
         <button class="btn-save" onclick="handleSave()">LƯU DOANH THU</button>
     </div>
 
-    <div class="list-header">Chi tiết các mục đã nhập</div>
+    <div class="list-header-row">
+        <div class="list-header">Chi tiết đã nhập</div>
+        <button class="btn-clear-all" onclick="clearDayData()">XÓA TẤT CẢ (NGÀY NÀY)</button>
+    </div>
     <div id="item-list"></div>
 
     <div class="month-stats" id="month-area"></div>
@@ -237,39 +255,48 @@
         renderAll();
     }
 
-    // LƯU DỮ LIỆU VỚI ID DUY NHẤT
     async function handleSave() {
         const rawValue = revenueInput.value.replace(/\./g, "");
         const val = parseFloat(rawValue);
-        
         if (!val || val < 0) return;
-        
         const catId = document.getElementById('cat-select').value;
         const isIns = document.getElementById('install-check').checked;
         const date = dateInput.value;
-
-        // Tạo ID duy nhất bằng cách kết hợp Timestamp và một số ngẫu nhiên
         const uniqueId = Date.now() + "_" + Math.floor(Math.random() * 1000);
-
         const tx = db.transaction("data", "readwrite");
-        await tx.objectStore("data").put({
-            id: uniqueId, // Chìa khóa mới không trùng lặp
-            date: date,
-            catId: catId,
-            val: val,
-            isIns: isIns
-        });
-
-        showToast();
+        await tx.objectStore("data").put({ id: uniqueId, date, catId, val, isIns });
+        showToast("Đã lưu thành công!");
         revenueInput.value = '';
         renderAll();
     }
 
     async function delItem(id) {
-        if (!confirm("Xóa mục này?")) return;
         const tx = db.transaction("data", "readwrite");
         await tx.objectStore("data").delete(id);
         renderAll();
+    }
+
+    // XÓA TẤT CẢ DỮ LIỆU CỦA NGÀY ĐANG CHỌN
+    async function clearDayData() {
+        const date = dateInput.value;
+        if (!confirm(`Bạn có chắc muốn xóa TẤT CẢ dữ liệu đã nhập trong ngày ${date}?`)) return;
+
+        const tx = db.transaction("data", "readwrite");
+        const store = tx.objectStore("data");
+        const all = await new Promise(r => {
+            const req = store.getAll();
+            req.onsuccess = () => r(req.result);
+        });
+
+        const dayItems = all.filter(d => d.date === date);
+        dayItems.forEach(item => {
+            store.delete(item.id);
+        });
+
+        tx.oncomplete = () => {
+            showToast("Đã xóa sạch ngày này!");
+            renderAll();
+        };
     }
 
     async function renderAll() {
@@ -280,25 +307,22 @@
             req.onsuccess = () => r(req.result);
         });
 
-        // Thống kê ngày
         const dayData = all.filter(d => d.date === date);
         let dR = 0, dC = 0;
         const list = document.getElementById('item-list');
         list.innerHTML = dayData.length === 0 ? '<p style="font-size:0.8rem; color:#888; text-align:center; padding:10px;">Chưa có dữ liệu ngày này</p>' : '';
 
-        // Sắp xếp dữ liệu mới nhất lên đầu danh sách
         dayData.reverse().forEach(item => {
             const c = CATS.find(x => x.id === item.catId);
             let qd = item.val * c.rate;
             if (item.isIns) qd += (item.val * 0.3);
             dR += item.val; dC += qd;
-
             list.innerHTML += `
                 <div class="item">
                     <div>
                         <div class="item-name">${c.name} ${item.isIns ? '<span style="color:green;font-size:0.7rem;">[TRẢ GÓP]</span>' : ''}</div>
-                        <div class="item-sub">Thực: ${fmt(item.val)} (HS: ${(c.rate*100).toFixed(0)}%)</div>
-                        <button class="del-btn" onclick="delItem('${item.id}')">Xóa mục này</button>
+                        <div class="item-sub">Thực: ${fmt(item.val)}</div>
+                        <button class="del-btn" onclick="delItem('${item.id}')">Xóa</button>
                     </div>
                     <div class="item-val">
                         <div class="val-qd">${fmt(qd)}</div>
@@ -310,7 +334,6 @@
         document.getElementById('d-conv').innerText = fmtShort(dC);
         document.getElementById('d-ratio').innerText = dR > 0 ? Math.round((dC/dR)*100) + "%" : "0%";
 
-        // Thống kê tháng
         const monthKey = date.substring(0, 7);
         const monData = all.filter(d => d.date.startsWith(monthKey));
         let mR = 0, mC = 0;
@@ -326,19 +349,18 @@
             <div style="font-weight:bold; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:5px;">THỐNG KÊ THÁNG ${monthKey}</div>
             <div style="display:flex; justify-content:space-between;"><span>Tổng thực:</span> <b>${fmt(mR)}</b></div>
             <div style="display:flex; justify-content:space-between; margin-top:5px;"><span>Tổng quy đổi:</span> <b style="color:var(--dmx-yellow); font-size:1.1rem">${fmt(mC)}</b></div>
-            <div style="margin-top:5px; opacity:0.8">Hiệu suất tháng: ${mR > 0 ? Math.round((mC/mR)*100) : 0}%</div>
         `;
     }
 
     function fmt(v) { return new Intl.NumberFormat('vi-VN').format(Math.round(v)) + " đ"; }
-    
     function fmtShort(v) { 
         if (v >= 1000000) return (v/1000000).toFixed(2) + "M";
         return new Intl.NumberFormat('vi-VN').format(Math.round(v));
     }
 
-    function showToast() {
+    function showToast(msg) {
         const t = document.getElementById('toast');
+        t.innerText = msg;
         t.style.display = 'block';
         setTimeout(() => t.style.display = 'none', 1500);
     }
@@ -363,7 +385,7 @@
         const blob = new Blob([csv], { type: 'text/csv' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `DoanhThu_DMX_Full_History.csv`;
+        a.download = `DoanhThu_DMX.csv`;
         a.click();
     }
 
