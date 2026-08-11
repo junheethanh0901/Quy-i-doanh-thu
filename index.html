@@ -1,4 +1,3 @@
---- START OF FILE index.html ---
 
 <!DOCTYPE html>
 <html lang="vi">
@@ -68,6 +67,15 @@
 
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; font-size: 0.8rem; margin-bottom: 4px; font-weight: bold; opacity: 0.8; }
+
+        /* Style cho dòng lưu ý chữ đỏ */
+        .note-red {
+            color: #ff4444;
+            font-size: 0.75rem;
+            margin-top: 5px;
+            font-weight: 500;
+            font-style: italic;
+        }
 
         select, .money-input {
             width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;
@@ -156,6 +164,7 @@
         <div class="form-group">
             <label>Ngành hàng</label>
             <select id="cat-select"></select>
+            <div class="note-red">Lưu ý chỉ gói bh thợ đmx mới được tính vào doanh thu tổng *600%</div>
         </div>
         <div class="form-group">
             <label>Doanh thu thực (VNĐ)</label>
@@ -317,7 +326,7 @@
                 </div>`;
         });
 
-        // CẬP NHẬT: Hiển thị rõ hàng ngàn ở phía trên
+        // Hiển thị chi tiết hàng ngàn (k) ở thanh Header
         document.getElementById('d-real').innerText = fmtDetailedK(dR);
         document.getElementById('d-conv').innerText = fmtDetailedK(dC);
         document.getElementById('d-ratio').innerText = dR > 0 ? Math.round((dC/dR)*100) + "%" : "0%";
@@ -340,7 +349,6 @@
 
     function fmt(v) { return new Intl.NumberFormat('vi-VN').format(Math.round(v)) + " đ"; }
     
-    // Hàm hiển thị chi tiết đến hàng ngàn (Ví dụ: 10.987k)
     function fmtDetailedK(v) {
         return new Intl.NumberFormat('vi-VN').format(Math.floor(v / 1000)) + "k";
     }
