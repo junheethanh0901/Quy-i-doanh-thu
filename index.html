@@ -1,3 +1,5 @@
+--- START OF FILE index.html ---
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -55,7 +57,7 @@
             border-top: 1px solid rgba(255,255,255,0.2);
             padding-top: 5px; font-size: 0.75rem; text-align: center;
         }
-        .stat-item b { color: var(--dmx-yellow); display: block; font-size: 0.9rem; }
+        .stat-item b { color: var(--dmx-yellow); display: block; font-size: 0.95rem; }
 
         .container { max-width: 600px; margin: 15px auto; padding: 0 10px; }
 
@@ -143,8 +145,8 @@
         </div>
     </div>
     <div class="stats-bar">
-        <div class="stat-item">Thực tế <b id="d-real">0</b></div>
-        <div class="stat-item">Quy đổi <b id="d-conv">0</b></div>
+        <div class="stat-item">Thực tế <b id="d-real">0k</b></div>
+        <div class="stat-item">Quy đổi <b id="d-conv">0k</b></div>
         <div class="stat-item">Hiệu suất <b id="d-ratio">0%</b></div>
     </div>
 </header>
@@ -188,7 +190,7 @@
     const CATS = [
         { id: "sim", name: "Sim", rate: 5.45 },
         { id: "bh", name: "Bảo hiểm", rate: 4.18 },
-        { id: "dv_bh", name: "DV bảo hành ĐMX", rate: 6.00 }, // Đã cập nhật thành 600%
+        { id: "dv_bh", name: "DV bảo hành ĐMX", rate: 6.00 },
         { id: "pk_ti", name: "Phụ kiện tiện ích", rate: 3.37 },
         { id: "pk_tr", name: "Phụ kiện trang trí", rate: 3.37 },
         { id: "loa_vt", name: "Loa vi tính", rate: 3.37 },
@@ -315,8 +317,9 @@
                 </div>`;
         });
 
-        document.getElementById('d-real').innerText = fmtShort(dR);
-        document.getElementById('d-conv').innerText = fmtShort(dC);
+        // CẬP NHẬT: Hiển thị rõ hàng ngàn ở phía trên
+        document.getElementById('d-real').innerText = fmtDetailedK(dR);
+        document.getElementById('d-conv').innerText = fmtDetailedK(dC);
         document.getElementById('d-ratio').innerText = dR > 0 ? Math.round((dC/dR)*100) + "%" : "0%";
 
         const monthKey = date.substring(0, 7);
@@ -337,6 +340,11 @@
 
     function fmt(v) { return new Intl.NumberFormat('vi-VN').format(Math.round(v)) + " đ"; }
     
+    // Hàm hiển thị chi tiết đến hàng ngàn (Ví dụ: 10.987k)
+    function fmtDetailedK(v) {
+        return new Intl.NumberFormat('vi-VN').format(Math.floor(v / 1000)) + "k";
+    }
+
     function fmtShort(v) { 
         if (v >= 1000000) return (v/1000000).toFixed(1).replace(".0", "") + "M";
         if (v >= 1000) return (v/1000).toFixed(0) + "k";
